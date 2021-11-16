@@ -30,8 +30,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.dao.DataRetrievalFailureException;
+import org.springframework.data.couchbase.core.CouchbaseTemplate;
+import org.springframework.data.couchbase.core.ReactiveCouchbaseTemplate;
+import org.springframework.data.couchbase.core.RemoveResult;
 import org.springframework.data.couchbase.domain.Airport;
 import org.springframework.data.couchbase.domain.AirportRepository;
+import org.springframework.data.couchbase.domain.CollectionsConfig;
 import org.springframework.data.couchbase.domain.Config;
 import org.springframework.data.couchbase.domain.User;
 import org.springframework.data.couchbase.domain.UserCol;
@@ -40,6 +44,7 @@ import org.springframework.data.couchbase.util.Capabilities;
 import org.springframework.data.couchbase.util.ClusterType;
 import org.springframework.data.couchbase.util.CollectionAwareIntegrationTests;
 import org.springframework.data.couchbase.util.IgnoreWhen;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 import com.couchbase.client.core.error.IndexFailureException;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -48,10 +53,13 @@ import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryScanConsistency;
 
 @IgnoreWhen(missesCapabilities = { Capabilities.QUERY, Capabilities.COLLECTIONS }, clusterTypes = ClusterType.MOCKED)
+@SpringJUnitConfig(CollectionsConfig.class)
 public class CouchbaseRepositoryQueryCollectionIntegrationTests extends CollectionAwareIntegrationTests {
 
 	@Autowired AirportRepository airportRepository;
 	@Autowired UserColRepository userColRepository;
+	@Autowired public CouchbaseTemplate couchbaseTemplate;
+	@Autowired public ReactiveCouchbaseTemplate reactiveCouchbaseTemplate;
 
 	@BeforeAll
 	public static void beforeAll() {
@@ -76,10 +84,10 @@ public class CouchbaseRepositoryQueryCollectionIntegrationTests extends Collecti
 		// then do processing for this class
 		couchbaseTemplate.removeByQuery(User.class).inCollection(collectionName).all();
 		couchbaseTemplate.removeByQuery(UserCol.class).inScope(otherScope).inCollection(otherCollection).all();
-		ApplicationContext ac = new AnnotationConfigApplicationContext(Config.class);
+		// ApplicationContext ac = new AnnotationConfigApplicationContext(Config.class);
 		// seems that @Autowired is not adequate, so ...
-		airportRepository = (AirportRepository) ac.getBean("airportRepository");
-		userColRepository = (UserColRepository) ac.getBean("userColRepository");
+		// airportRepository = (AirportRepository) ac.getBean("airportRepository");
+		// userColRepository = (UserColRepository) ac.getBean("userColRepository");
 	}
 
 	@AfterEach
@@ -203,7 +211,7 @@ public class CouchbaseRepositoryQueryCollectionIntegrationTests extends Collecti
 			userColRepository.delete(userCol); // uses UserCol annotation scope, populates CrudMethodMetadata
 			assertThrows(IllegalStateException.class, () -> airportRepository.save(airport));
 		} finally {
-			couchbaseTemplate.removeByQuery(Airport.class).all();
+			List<RemoveResult> removed = couchbaseTemplate.removeByQuery(Airport.class).all();
 			couchbaseTemplate.findByQuery(Airport.class).withConsistency(QueryScanConsistency.REQUEST_PLUS).all();
 		}
 	}

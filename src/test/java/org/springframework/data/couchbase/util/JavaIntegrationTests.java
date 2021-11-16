@@ -92,8 +92,8 @@ import com.couchbase.client.java.search.result.SearchResult;
 public class JavaIntegrationTests extends ClusterAwareIntegrationTests {
 
 	// Autowired annotation is not supported on static fields
-	static public CouchbaseTemplate couchbaseTemplate;
-	static public ReactiveCouchbaseTemplate reactiveCouchbaseTemplate;
+	//static public CouchbaseTemplate couchbaseTemplate;
+	//static public ReactiveCouchbaseTemplate reactiveCouchbaseTemplate;
 
 	@BeforeAll
 	public static void beforeAll() {
@@ -106,11 +106,11 @@ public class JavaIntegrationTests extends ClusterAwareIntegrationTests {
 			throw new RuntimeException(ioe);
 		}
 		// This will result in a Transactions object being created.
-		if (couchbaseTemplate == null || reactiveCouchbaseTemplate == null) {
-			ApplicationContext ac = new AnnotationConfigApplicationContext(Config.class);
-			couchbaseTemplate = (CouchbaseTemplate) ac.getBean(COUCHBASE_TEMPLATE);
-			reactiveCouchbaseTemplate = (ReactiveCouchbaseTemplate) ac.getBean(REACTIVE_COUCHBASE_TEMPLATE);
-		}
+		//if (couchbaseTemplate == null || reactiveCouchbaseTemplate == null) {
+		//	ApplicationContext ac = new AnnotationConfigApplicationContext(Config.class);
+		//	couchbaseTemplate = (CouchbaseTemplate) ac.getBean(COUCHBASE_TEMPLATE);
+		//	reactiveCouchbaseTemplate = (ReactiveCouchbaseTemplate) ac.getBean(REACTIVE_COUCHBASE_TEMPLATE);
+		//}
 	}
 
 	/**

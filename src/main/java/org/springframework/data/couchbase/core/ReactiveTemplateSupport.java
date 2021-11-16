@@ -15,24 +15,36 @@
  */
 package org.springframework.data.couchbase.core;
 
+import org.springframework.data.couchbase.transaction.ClientSession;
 import reactor.core.publisher.Mono;
 
+import org.springframework.data.couchbase.core.convert.translation.TranslationService;
 import org.springframework.data.couchbase.core.mapping.CouchbaseDocument;
-import org.springframework.data.couchbase.core.mapping.event.CouchbaseMappingEvent;
 import org.springframework.data.couchbase.repository.support.TransactionResultHolder;
 
 public interface ReactiveTemplateSupport {
 
 	Mono<CouchbaseDocument> encodeEntity(Object entityToEncode);
 
-	<T> Mono<T> decodeEntity(String id, String source, long cas, Class<T> entityClass, TransactionResultHolder txHolder);
-
-	<T> Mono<T> applyResult(T entity, CouchbaseDocument converted, Object id, long cas,
+	<T> Mono<T> decodeEntity(String id, String source, long cas, Class<T> entityClass,
 			TransactionResultHolder txResultHolder);
+
+	<T> Mono<T> decodeEntity(String id, String source, long cas, Class<T> entityClass,
+													 TransactionResultHolder txResultHolder, ClientSession session);
+
+	<T> Mono<T> applyResult(T entity, CouchbaseDocument converted, Object id, Long cas,
+			TransactionResultHolder txResultHolder);
+
+	<T> Mono<T> applyResult(T entity, CouchbaseDocument converted, Object id, Long cas,
+													TransactionResultHolder txResultHolder, ClientSession session);
 
 	Long getCas(Object entity);
 
 	String getJavaNameForEntity(Class<?> clazz);
 
-	<T> TransactionResultHolder getTxResultHolder(T source);
+	<T> Integer getTxResultHolder(T source);
+
+	//<T> Integer setTxResultHolder(T source);
+
+	TranslationService getTranslationService();
 }

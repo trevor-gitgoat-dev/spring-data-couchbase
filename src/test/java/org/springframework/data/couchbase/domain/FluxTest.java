@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021 the original author or authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *        https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.data.couchbase.domain;
 
 import com.couchbase.client.java.query.QueryOptions;
@@ -5,6 +20,7 @@ import com.couchbase.client.java.query.QueryProfile;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.QueryScanConsistency;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.data.couchbase.config.BeanNames;
@@ -48,8 +64,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
 public class FluxTest extends JavaIntegrationTests {
 
-	@BeforeAll
-	public static void beforeEverything() {
+	@Autowired public CouchbaseTemplate couchbaseTemplate;
+	@Autowired public ReactiveCouchbaseTemplate reactiveCouchbaseTemplate;
+
+	@BeforeEach
+	@Override
+	public void beforeEach() {
+
 		/**
 		 * The couchbaseTemplate inherited from JavaIntegrationTests uses org.springframework.data.couchbase.domain.Config
 		 * It has typeName = 't' (instead of _class). Don't use it.
@@ -63,18 +84,14 @@ public class FluxTest extends JavaIntegrationTests {
 			couchbaseTemplate.getCouchbaseClientFactory().getBucket().defaultCollection().upsert(k,
 					JsonObject.create().put("x", k));
 		}
+		super.beforeEach();
 	}
 
-	@AfterAll
-	public static void afterEverthing() {
+	@AfterEach
+	public void afterEach() {
 		couchbaseTemplate.removeByQuery(Airport.class).withConsistency(QueryScanConsistency.REQUEST_PLUS).all();
 		couchbaseTemplate.findByQuery(Airport.class).withConsistency(QueryScanConsistency.REQUEST_PLUS).all();
-	}
-
-	@BeforeEach
-	@Override
-	public void beforeEach() {
-		super.beforeEach();
+		super.afterEach();
 	}
 
 	static List<String> keyList = Arrays.asList("a", "b", "c", "d", "e");

@@ -49,7 +49,6 @@ public class CollectionAwareIntegrationTests extends JavaIntegrationTests {
 
 	@BeforeAll
 	public static void beforeAll() {
-		Config.setScopeName(scopeName);
 		callSuperBeforeAll(new Object() {});
 		ClusterEnvironment environment = environment().build();
 		Cluster cluster = Cluster.connect(seedNodes(),
@@ -66,19 +65,6 @@ public class CollectionAwareIntegrationTests extends JavaIntegrationTests {
 			setupScopeCollection(cluster, otherScope, otherCollection, collectionManager);
 		}
 
-		ApplicationContext ac = new AnnotationConfigApplicationContext(Config.class);
-		// the Config class has been modified, these need to be loaded again
-		couchbaseTemplate = (CouchbaseTemplate) ac.getBean(COUCHBASE_TEMPLATE);
-		reactiveCouchbaseTemplate = (ReactiveCouchbaseTemplate) ac.getBean(REACTIVE_COUCHBASE_TEMPLATE);
 	}
 
-	@AfterAll
-	public static void afterAll() {
-		Config.setScopeName(null);
-		ApplicationContext ac = new AnnotationConfigApplicationContext(Config.class);
-		// the Config class has been modified, these need to be loaded again
-		couchbaseTemplate = (CouchbaseTemplate) ac.getBean(COUCHBASE_TEMPLATE);
-		reactiveCouchbaseTemplate = (ReactiveCouchbaseTemplate) ac.getBean(REACTIVE_COUCHBASE_TEMPLATE);
-		callSuperAfterAll(new Object() {});
-	}
 }

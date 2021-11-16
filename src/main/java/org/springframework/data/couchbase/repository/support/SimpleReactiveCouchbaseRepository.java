@@ -18,6 +18,7 @@ package org.springframework.data.couchbase.repository.support;
 
 import static org.springframework.data.couchbase.repository.support.Util.hasNonZeroVersionProperty;
 
+import org.springframework.data.couchbase.transaction.CouchbaseStuffHandle;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -28,7 +29,9 @@ import java.util.stream.Collectors;
 import org.reactivestreams.Publisher;
 import org.springframework.data.couchbase.core.CouchbaseOperations;
 import org.springframework.data.couchbase.core.ReactiveCouchbaseOperations;
+import org.springframework.data.couchbase.core.ReactiveCouchbaseTemplate;
 import org.springframework.data.couchbase.core.query.Query;
+import org.springframework.data.couchbase.core.support.PseudoArgs;
 import org.springframework.data.couchbase.repository.ReactiveCouchbaseRepository;
 import org.springframework.data.couchbase.repository.query.CouchbaseEntityInformation;
 import org.springframework.data.domain.Sort;
@@ -75,6 +78,9 @@ public class SimpleReactiveCouchbaseRepository<T, ID> extends CouchbaseRepositor
 		Mono<S> result;
 		if (hasNonZeroVersionProperty(entity, operations.getConverter())) {
 			result = (Mono<S>) operations.replaceById(getJavaType()).inScope(getScope()).inCollection(getCollection())
+					.one(entity);
+		} else if (getTransactionalOperator() != null) {
+			result = (Mono<S>) operations.insertById(getJavaType()).inScope(getScope()).inCollection(getCollection())
 					.one(entity);
 		} else {
 			result = (Mono<S>) operations.upsertById(getJavaType()).inScope(getScope()).inCollection(getCollection())
@@ -200,6 +206,26 @@ public class SimpleReactiveCouchbaseRepository<T, ID> extends CouchbaseRepositor
 	@Override
 	public ReactiveCouchbaseOperations getOperations() {
 		return operations;
+	}
+
+	/**
+	 * Get the TransactionalOperator from <br>
+	 * 1. The template.clientFactory<br>
+	 * 2. The template.threadLocal<br>
+	 * 3. otherwise null<br>
+	 * This can be overriden in the operation method by<br>
+	 * 1. repository.withCollection()
+	 */
+	private CouchbaseStuffHandle getTransactionalOperator() {
+		if (operations.getCouchbaseClientFactory().getTransactionalOperator() != null) {
+			return operations.getCouchbaseClientFactory().getTransactionalOperator();
+		}
+		ReactiveCouchbaseTemplate t = (ReactiveCouchbaseTemplate) operations;
+		PseudoArgs pArgs = t.getPseudoArgs();
+		if (pArgs != null && pArgs.getTxOp() != null) {
+			return pArgs.getTxOp();
+		}
+		return null;
 	}
 
 }

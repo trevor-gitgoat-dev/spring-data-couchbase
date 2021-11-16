@@ -18,6 +18,9 @@ package org.springframework.data.couchbase.core;
 
 import org.springframework.data.couchbase.CouchbaseClientFactory;
 import org.springframework.data.couchbase.core.convert.CouchbaseConverter;
+import org.springframework.data.couchbase.core.query.Query;
+
+import static org.springframework.data.couchbase.repository.support.Util.hasNonZeroVersionProperty;
 
 /**
  * Defines common operations on the Couchbase data source, most commonly implemented by {@link CouchbaseTemplate}.
@@ -43,5 +46,9 @@ public interface CouchbaseOperations extends FluentCouchbaseOperations {
 	 * Returns the underlying client factory.
 	 */
 	CouchbaseClientFactory getCouchbaseClientFactory();
+
+	<T> T save(T entity);
+
+	 <T> Long count(Query query, Class<T> domainType);
 
 }

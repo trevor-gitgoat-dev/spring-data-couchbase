@@ -15,10 +15,23 @@
  */
 package org.springframework.data.couchbase;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Supplier;
 
+import com.couchbase.transactions.AttemptContext;
+import com.couchbase.transactions.TransactionContext;
+import com.couchbase.transactions.config.MergedTransactionConfig;
+import com.couchbase.transactions.config.PerTransactionConfig;
+import com.couchbase.transactions.config.PerTransactionConfigBuilder;
 import org.springframework.dao.support.PersistenceExceptionTranslator;
 import org.springframework.data.couchbase.core.CouchbaseExceptionTranslator;
+import org.springframework.data.couchbase.transaction.ClientSession;
+import org.springframework.data.couchbase.transaction.ClientSessionImpl;
+import org.springframework.data.couchbase.transaction.ClientSessionOptions;
+import org.springframework.data.couchbase.transaction.CouchbaseStuffHandle;
 
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.OwnedSupplier;
@@ -29,6 +42,9 @@ import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.Scope;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.transactions.AttemptContextReactive;
+import com.couchbase.transactions.Transactions;
+import com.couchbase.transactions.config.TransactionConfig;
 
 /**
  * The default implementation of a {@link CouchbaseClientFactory}.
@@ -42,6 +58,7 @@ public class SimpleCouchbaseClientFactory implements CouchbaseClientFactory {
 	private final Bucket bucket;
 	private final Scope scope;
 	private final PersistenceExceptionTranslator exceptionTranslator;
+	private final CouchbaseStuffHandle transactionalOperator;
 
 	public SimpleCouchbaseClientFactory(final String connectionString, final Authenticator authenticator,
 			final String bucketName) {
@@ -68,10 +85,16 @@ public class SimpleCouchbaseClientFactory implements CouchbaseClientFactory {
 
 	private SimpleCouchbaseClientFactory(final Supplier<Cluster> cluster, final String bucketName,
 			final String scopeName) {
+		this(cluster, bucketName, scopeName, null);
+	}
+
+	private SimpleCouchbaseClientFactory(final Supplier<Cluster> cluster, final String bucketName, final String scopeName,
+			final CouchbaseStuffHandle transactionalOperator) {
 		this.cluster = cluster;
 		this.bucket = cluster.get().bucket(bucketName);
 		this.scope = scopeName == null ? bucket.defaultScope() : bucket.scope(scopeName);
 		this.exceptionTranslator = new CouchbaseExceptionTranslator();
+		this.transactionalOperator = transactionalOperator;
 	}
 
 	@Override
@@ -117,10 +140,50 @@ public class SimpleCouchbaseClientFactory implements CouchbaseClientFactory {
 	}
 
 	@Override
+	public ClientSession getSession(ClientSessionOptions options, Transactions transactions, TransactionConfig config,
+			AttemptContextReactive atr) {
+
+		AttemptContext at = AttemptContext.from( atr != null ? atr : transactions.reactive().newAttemptContextReactive());
+
+		return new ClientSessionImpl(this, transactions, config, at);
+	}
+
+	/* copied from AttemptContextReactive - needs to have cleanup() and createAttemptContext() public
+
+	  public AttemptContextReactive newAttemptContextReactive(Transactions transactions, TransactionConfig config){
+		PerTransactionConfig perConfig = PerTransactionConfigBuilder.create().build();
+		MergedTransactionConfig merged = new MergedTransactionConfig(config, Optional.of(perConfig));
+
+		TransactionContext overall = new TransactionContext(
+				transactions.reactive().cleanup().clusterData().cluster().environment().requestTracer(),
+				transactions.reactive().cleanup().clusterData().cluster().environment().eventBus(),
+				UUID.randomUUID().toString(), now(), Duration.ZERO, merged);
+
+		String txnId = UUID.randomUUID().toString();
+		//overall.LOGGER.info(configDebug(config, perConfig));
+		return transactions.reactive().createAttemptContext(overall, merged, txnId);
+	}
+	*/
+
+	@Override
+	public CouchbaseClientFactory with(CouchbaseStuffHandle txOp) {
+		return new SimpleCouchbaseClientFactory(cluster, bucket.name(), scope.name(), txOp);
+	}
+
+	@Override
+	public CouchbaseStuffHandle getTransactionalOperator() {
+		return (CouchbaseStuffHandle) transactionalOperator;
+	}
+
+	@Override
 	public void close() {
 		if (cluster instanceof OwnedSupplier) {
 			cluster.get().disconnect();
 		}
+	}
+
+	private static Duration now() {
+		return Duration.of(System.nanoTime(), ChronoUnit.NANOS);
 	}
 
 }

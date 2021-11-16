@@ -21,10 +21,10 @@ import java.util.Collection;
 import java.util.List;
 
 import org.springframework.data.couchbase.core.ReactiveFindByIdOperationSupport.ReactiveFindByIdSupport;
+import org.springframework.data.couchbase.transaction.CouchbaseStuffHandle;
 import org.springframework.util.Assert;
 
 import com.couchbase.client.java.kv.GetOptions;
-import com.couchbase.transactions.AttemptContextReactive;
 
 public class ExecutableFindByIdOperationSupport implements ExecutableFindByIdOperation {
 
@@ -48,11 +48,11 @@ public class ExecutableFindByIdOperationSupport implements ExecutableFindByIdOpe
 		private final GetOptions options;
 		private final List<String> fields;
 		private final Duration expiry;
-		private final AttemptContextReactive txCtx;
+		private final CouchbaseStuffHandle txCtx;
 		private final ReactiveFindByIdSupport<T> reactiveSupport;
 
 		ExecutableFindByIdSupport(CouchbaseTemplate template, Class<T> domainType, String scope, String collection,
-				GetOptions options, List<String> fields, Duration expiry, AttemptContextReactive txCtx) {
+															GetOptions options, List<String> fields, Duration expiry, CouchbaseStuffHandle txCtx) {
 			this.template = template;
 			this.domainType = domainType;
 			this.scope = scope;
@@ -104,7 +104,7 @@ public class ExecutableFindByIdOperationSupport implements ExecutableFindByIdOpe
 		}
 
 		@Override
-		public FindByIdWithExpiry<T> transaction(AttemptContextReactive txCtx) {
+		public FindByIdWithExpiry<T> transaction(CouchbaseStuffHandle txCtx) {
 			Assert.notNull(txCtx, "txCtx must not be null.");
 			return new ExecutableFindByIdSupport<>(template, domainType, scope, collection, options, fields, expiry, txCtx);
 		}

@@ -32,7 +32,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.data.convert.CustomConversions;
 import org.springframework.data.couchbase.CouchbaseClientFactory;
+import org.springframework.data.couchbase.ReactiveCouchbaseClientFactory;
 import org.springframework.data.couchbase.SimpleCouchbaseClientFactory;
+import org.springframework.data.couchbase.SimpleReactiveCouchbaseClientFactory;
 import org.springframework.data.couchbase.core.CouchbaseTemplate;
 import org.springframework.data.couchbase.core.ReactiveCouchbaseTemplate;
 import org.springframework.data.couchbase.core.convert.CouchbaseCustomConversions;
@@ -43,6 +45,8 @@ import org.springframework.data.couchbase.core.mapping.CouchbaseMappingContext;
 import org.springframework.data.couchbase.core.mapping.Document;
 import org.springframework.data.couchbase.repository.config.ReactiveRepositoryOperationsMapping;
 import org.springframework.data.couchbase.repository.config.RepositoryOperationsMapping;
+import org.springframework.data.couchbase.transaction.CouchbaseTransactionManager;
+import org.springframework.data.couchbase.transaction.ReactiveCouchbaseTransactionManager;
 import org.springframework.data.mapping.model.CamelCaseAbbreviatingFieldNamingStrategy;
 import org.springframework.data.mapping.model.FieldNamingStrategy;
 import org.springframework.data.mapping.model.PropertyNameFieldNamingStrategy;
@@ -135,6 +139,11 @@ public abstract class AbstractCouchbaseConfiguration {
 		return new SimpleCouchbaseClientFactory(couchbaseCluster, getBucketName(), getScopeName());
 	}
 
+	@Bean
+	public ReactiveCouchbaseClientFactory reactiveCouchbaseClientFactory(final Cluster couchbaseCluster) {
+		return new SimpleReactiveCouchbaseClientFactory(couchbaseCluster, getBucketName(), getScopeName());
+	}
+
 	@Bean(destroyMethod = "disconnect")
 	public Cluster couchbaseCluster(ClusterEnvironment couchbaseClusterEnvironment) {
 		return Cluster.connect(getConnectionString(),
@@ -163,25 +172,31 @@ public abstract class AbstractCouchbaseConfiguration {
 
 	@Bean(name = BeanNames.COUCHBASE_TEMPLATE)
 	public CouchbaseTemplate couchbaseTemplate(CouchbaseClientFactory couchbaseClientFactory,
+			ReactiveCouchbaseClientFactory reactiveCouchbaseClientFactory,
 			MappingCouchbaseConverter mappingCouchbaseConverter, TranslationService couchbaseTranslationService) {
-		return new CouchbaseTemplate(couchbaseClientFactory, mappingCouchbaseConverter, couchbaseTranslationService);
-	}
-
-	public CouchbaseTemplate couchbaseTemplate(CouchbaseClientFactory couchbaseClientFactory,
-			MappingCouchbaseConverter mappingCouchbaseConverter) {
-		return couchbaseTemplate(couchbaseClientFactory, mappingCouchbaseConverter, new JacksonTranslationService());
-	}
-
-	@Bean(name = BeanNames.REACTIVE_COUCHBASE_TEMPLATE)
-	public ReactiveCouchbaseTemplate reactiveCouchbaseTemplate(CouchbaseClientFactory couchbaseClientFactory,
-			MappingCouchbaseConverter mappingCouchbaseConverter, TranslationService couchbaseTranslationService) {
-		return new ReactiveCouchbaseTemplate(couchbaseClientFactory, mappingCouchbaseConverter,
+		return new CouchbaseTemplate(couchbaseClientFactory, reactiveCouchbaseClientFactory, mappingCouchbaseConverter,
 				couchbaseTranslationService);
 	}
 
-	public ReactiveCouchbaseTemplate reactiveCouchbaseTemplate(CouchbaseClientFactory couchbaseClientFactory,
+	public CouchbaseTemplate couchbaseTemplate(CouchbaseClientFactory couchbaseClientFactory,
+			ReactiveCouchbaseClientFactory reactiveCouchbaseClientFactory,
 			MappingCouchbaseConverter mappingCouchbaseConverter) {
-		return reactiveCouchbaseTemplate(couchbaseClientFactory, mappingCouchbaseConverter,
+		return couchbaseTemplate(couchbaseClientFactory, reactiveCouchbaseClientFactory, mappingCouchbaseConverter,
+				new JacksonTranslationService());
+	}
+
+	@Bean(name = BeanNames.REACTIVE_COUCHBASE_TEMPLATE)
+	public ReactiveCouchbaseTemplate reactiveCouchbaseTemplate(
+			ReactiveCouchbaseClientFactory reactiveCouchbaseClientFactory,
+			MappingCouchbaseConverter mappingCouchbaseConverter, TranslationService couchbaseTranslationService) {
+		return new ReactiveCouchbaseTemplate(reactiveCouchbaseClientFactory, mappingCouchbaseConverter,
+				couchbaseTranslationService);
+	}
+
+	public ReactiveCouchbaseTemplate reactiveCouchbaseTemplate(
+			ReactiveCouchbaseClientFactory reactiveCouchbaseClientFactory,
+			MappingCouchbaseConverter mappingCouchbaseConverter) {
+		return reactiveCouchbaseTemplate( reactiveCouchbaseClientFactory, mappingCouchbaseConverter,
 				new JacksonTranslationService());
 	}
 
@@ -322,12 +337,29 @@ public abstract class AbstractCouchbaseConfiguration {
 
 	@Bean(COUCHBASE_TRANSACTIONS)
 	public Transactions getTransactions(Cluster cluster) {
-		return Transactions.create(cluster, getTransactionConfig());
+		return Transactions.create(cluster, transactionConfig());
 	}
 
-	TransactionConfig getTransactionConfig() {
+	public TransactionConfig transactionConfig() {
 		return TransactionConfigBuilder.create().logDirectly(Event.Severity.INFO).logOnFailure(true, Event.Severity.ERROR)
-				.expirationTime(Duration.ofMinutes(10)).durabilityLevel(TransactionDurabilityLevel.NONE).build();
+				.expirationTime(Duration.ofSeconds(10)).durabilityLevel(TransactionDurabilityLevel.MAJORITY).build();
+	}
+
+	public TransactionConfig getReactiveTransactionConfig() {
+		return TransactionConfigBuilder.create().logDirectly(Event.Severity.INFO).logOnFailure(true, Event.Severity.ERROR)
+				.expirationTime(Duration.ofSeconds(10)).durabilityLevel(TransactionDurabilityLevel.MAJORITY).build();
+	}
+
+	@Bean(BeanNames.REACTIVE_COUCHBASE_TRANSACTION_MANAGER)
+	ReactiveCouchbaseTransactionManager reactiveTransactionManager(
+			ReactiveCouchbaseClientFactory reactiveCouchbaseClientFactory, Transactions transactions) {
+		return new ReactiveCouchbaseTransactionManager(reactiveCouchbaseClientFactory, transactions);
+	}
+
+	@Bean(BeanNames.COUCHBASE_TRANSACTION_MANAGER)
+	CouchbaseTransactionManager transactionManager(CouchbaseClientFactory couchbaseClientFactory,
+			Transactions transactions) {
+		return new CouchbaseTransactionManager(couchbaseClientFactory, transactions);
 	}
 
 	/**

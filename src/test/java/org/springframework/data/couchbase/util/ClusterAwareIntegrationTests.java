@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -59,12 +60,12 @@ public abstract class ClusterAwareIntegrationTests {
 		try (CouchbaseClientFactory couchbaseClientFactory = new SimpleCouchbaseClientFactory(connectionString(),
 				authenticator(), bucketName())) {
 			couchbaseClientFactory.getCluster().queryIndexes().createPrimaryIndex(bucketName(),
-					CreatePrimaryQueryIndexOptions.createPrimaryQueryIndexOptions().ignoreIfExists(true));
+					CreatePrimaryQueryIndexOptions.createPrimaryQueryIndexOptions().ignoreIfExists(true).timeout(Duration.ofSeconds(300)));
 			// this is for the N1qlJoin test
 			List<String> fieldList = new ArrayList<>();
 			fieldList.add("parentId");
 			couchbaseClientFactory.getCluster().queryIndexes().createIndex(bucketName(), "parent_idx", fieldList,
-					CreateQueryIndexOptions.createQueryIndexOptions().ignoreIfExists(true));
+					CreateQueryIndexOptions.createQueryIndexOptions().ignoreIfExists(true).timeout(Duration.ofSeconds(300)));
 			// .with("_class", "org.springframework.data.couchbase.domain.Address"));
 		} catch (IndexFailureException ife) {
 			LOGGER.warn("IndexFailureException occurred - ignoring: ", ife);

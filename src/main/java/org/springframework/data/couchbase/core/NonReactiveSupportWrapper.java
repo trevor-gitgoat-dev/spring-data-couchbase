@@ -15,10 +15,11 @@
  */
 package org.springframework.data.couchbase.core;
 
+import org.springframework.data.couchbase.core.convert.translation.TranslationService;
+import org.springframework.data.couchbase.transaction.ClientSession;
 import reactor.core.publisher.Mono;
 
 import org.springframework.data.couchbase.core.mapping.CouchbaseDocument;
-import org.springframework.data.couchbase.core.mapping.event.CouchbaseMappingEvent;
 import org.springframework.data.couchbase.repository.support.TransactionResultHolder;
 
 /**
@@ -42,15 +43,28 @@ public class NonReactiveSupportWrapper implements ReactiveTemplateSupport {
 
 	@Override
 	public <T> Mono<T> decodeEntity(String id, String source, long cas, Class<T> entityClass,
-			TransactionResultHolder txResultHolder) {
-		return Mono.fromSupplier(() -> support.decodeEntity(id, source, cas, entityClass, txResultHolder));
+																	TransactionResultHolder txResultHolder) {
+		return decodeEntity(id, source, cas, entityClass, txResultHolder, null);
 	}
 
 	@Override
-	public <T> Mono<T> applyResult(T entity, CouchbaseDocument converted, Object id, long cas,
-			TransactionResultHolder txResultHolder) {
+	public <T> Mono<T> decodeEntity(String id, String source, long cas, Class<T> entityClass,
+																	TransactionResultHolder txResultHolder, ClientSession session) {
+		return Mono.fromSupplier(() -> support.decodeEntity(id, source, cas, entityClass, txResultHolder, session));
+	}
+
+	@Override
+	public <T> Mono<T> applyResult(T entity, CouchbaseDocument converted, Object id, Long cas,
+																 TransactionResultHolder txResultHolder) {
 		return Mono.fromSupplier(() -> support.applyResult(entity, converted, id, cas, txResultHolder));
 	}
+
+	@Override
+	public <T> Mono<T> applyResult(T entity, CouchbaseDocument converted, Object id, Long cas,
+																 TransactionResultHolder txResultHolder, ClientSession session) {
+		return Mono.fromSupplier(() -> support.applyResult(entity, converted, id, cas, txResultHolder, session));
+	}
+
 
 	@Override
 	public Long getCas(Object entity) {
@@ -63,7 +77,12 @@ public class NonReactiveSupportWrapper implements ReactiveTemplateSupport {
 	}
 
 	@Override
-	public <T> TransactionResultHolder getTxResultHolder(T source) {
+	public <T> Integer getTxResultHolder(T source) {
 		return support.getTxResultHolder(source);
+	}
+
+	@Override
+	public TranslationService getTranslationService() {
+		return support.getTranslationService();
 	}
 }
