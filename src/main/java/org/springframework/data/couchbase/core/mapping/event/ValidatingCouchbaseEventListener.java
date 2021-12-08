@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2020 the original author or authors
+ * Copyright 2012-2021 the original author or authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,17 @@
 
 package org.springframework.data.couchbase.core.mapping.event;
 
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Validator;
+
 import java.util.Set;
 
-import javax.validation.ConstraintViolationException;
-import javax.validation.Validator;
-
+import kotlin.reflect.jvm.internal.ReflectProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.couchbase.core.mapping.CouchbaseDocument;
 import org.springframework.util.Assert;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 /**
  * javax.validation dependant entities validator. When it is registered as Spring component its automatically invoked
@@ -33,6 +35,7 @@ import org.springframework.util.Assert;
  * @author Maciej Walkowiak
  * @author Michael Nitschinger
  * @author Mark Paluch
+ * @author Michael Reiche
  */
 public class ValidatingCouchbaseEventListener extends AbstractCouchbaseEventListener<Object> {
 
