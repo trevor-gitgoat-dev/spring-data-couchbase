@@ -53,7 +53,7 @@ import org.springframework.data.mapping.AssociationHandler;
 import org.springframework.data.mapping.MappingException;
 import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.PersistentPropertyAccessor;
-import org.springframework.data.mapping.PreferredConstructor.Parameter;
+import org.springframework.data.mapping.Parameter;
 import org.springframework.data.mapping.PropertyHandler;
 import org.springframework.data.mapping.callback.EntityCallbacks;
 import org.springframework.data.mapping.context.MappingContext;

@@ -65,6 +65,7 @@ import org.springframework.data.couchbase.core.mapping.event.ValidatingCouchbase
 import org.springframework.data.couchbase.core.query.N1QLExpression;
 import org.springframework.data.couchbase.core.query.QueryCriteria;
 import org.springframework.data.couchbase.domain.Address;
+import org.springframework.data.couchbase.domain.AirlineRepository;
 import org.springframework.data.couchbase.domain.Airport;
 import org.springframework.data.couchbase.domain.AirportMini;
 import org.springframework.data.couchbase.domain.AirportRepository;
@@ -120,6 +121,8 @@ public class CouchbaseRepositoryQueryIntegrationTests extends ClusterAwareIntegr
 	@Autowired CouchbaseClientFactory clientFactory;
 
 	@Autowired AirportRepository airportRepository;
+
+	@Autowired AirlineRepository airlineRepository;
 
 	@Autowired UserRepository userRepository;
 
@@ -586,11 +589,12 @@ public class CouchbaseRepositoryQueryIntegrationTests extends ClusterAwareIntegr
 			airportRepository.saveAll(
 					Arrays.stream(iatas).map((iata) -> new Airport("airports::" + iata, iata, iata.toLowerCase(Locale.ROOT)))
 							.collect(Collectors.toSet()));
-			List<Airport> airports = airportRepository.withOptions(QueryOptions.queryOptions().scanConsistency(REQUEST_PLUS)).findAll(Sort.by("iata"));
+			List<Airport> airports = airportRepository.withOptions(QueryOptions.queryOptions().scanConsistency(REQUEST_PLUS))
+					.findAll(Sort.by("iata"));
 			String[] sortedIatas = iatas.clone();
-			System.out.println(""+iatas.length+" "+sortedIatas.length);
+			System.out.println("" + iatas.length + " " + sortedIatas.length);
 			Arrays.sort(sortedIatas);
-			for(int i=0; i< sortedIatas.length; i++){
+			for (int i = 0; i < sortedIatas.length; i++) {
 				assertEquals(sortedIatas[i], airports.get(i).getIata());
 			}
 		} finally {
