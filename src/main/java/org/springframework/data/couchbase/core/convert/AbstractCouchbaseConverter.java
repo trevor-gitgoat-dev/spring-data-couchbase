@@ -23,6 +23,7 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.GenericConversionService;
 import org.springframework.data.convert.CustomConversions;
 import org.springframework.data.mapping.model.EntityInstantiators;
+import org.springframework.data.util.TypeInformation;
 
 /**
  * An abstract {@link CouchbaseConverter} that provides the basics for the {@link MappingCouchbaseConverter}.
@@ -105,24 +106,20 @@ public abstract class AbstractCouchbaseConverter implements CouchbaseConverter, 
 
 	}
 
-	/* TODO needed later
 	@Override
 	public Object convertToCouchbaseType(Object value,  TypeInformation<?> typeInformation) {
 		if (value == null) {
 			return null;
 		}
-	
 		return this.conversions.getCustomWriteTarget(value.getClass()) //
 				.map(it -> (Object) this.conversionService.convert(value, it)) //
 				.orElseGet(() -> Enum.class.isAssignableFrom(value.getClass()) ? ((Enum<?>) value).name() : value);
-	
 	}
 	
 	@Override
 	public Object convertToCouchbaseType(String source) {
 		return source;
 	}
-	*/
 
 	@Override
 	public Class<?> getWriteClassFor(Class<?> clazz) {

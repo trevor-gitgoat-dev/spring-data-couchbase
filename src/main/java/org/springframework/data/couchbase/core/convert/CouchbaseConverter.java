@@ -63,9 +63,19 @@ public interface CouchbaseConverter
 	 */
 	Alias getTypeAlias(TypeInformation<?> info);
 
-	// TODO needed later
-	// CouchbaseTypeMapper getMapper();
-	// Object convertToCouchbaseType(Object source, TypeInformation<?> typeInformation);
-	//
-	// Object convertToCouchbaseType(String source);
+	/**
+	 *  convert to a couchbase type
+	 *
+	 * @param source
+	 * @param typeInformation
+	 * @return
+	 */
+	Object convertToCouchbaseType(Object source, TypeInformation<?> typeInformation);
+
+	/**
+	 * convert to a couchbase type
+	 * @param source
+	 * @return
+	 */
+	Object convertToCouchbaseType(String source);
 }

@@ -334,6 +334,19 @@ public class CouchbaseRepositoryQuerydslIntegrationTests extends JavaIntegration
 	}
 
 	@Test
+	void testMatches() {
+		{
+			BooleanExpression predicate = airline.name.matches("[Uu]nited.*");
+			Iterable<Airline> result = airlineRepository.findAll(predicate);
+			assertNull(
+					comprises(result, Arrays.stream(saved).filter(a -> a.getName().matches("[Uu]nited.*")).toArray(Airline[]::new)),
+					"[unexpected] -> [missing]");
+			assertEquals(" WHERE regexp_like(name, $1)", bq(predicate));
+		}
+	}
+
+
+	@Test
 	void testLike() {
 		{
 			BooleanExpression predicate = airline.name.like("%nited%");

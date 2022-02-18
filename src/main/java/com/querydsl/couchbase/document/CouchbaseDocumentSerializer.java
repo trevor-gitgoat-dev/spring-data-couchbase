@@ -54,6 +54,7 @@ public abstract class CouchbaseDocumentSerializer implements Visitor<Object, Voi
 		return expression.accept(this, null);
 	}
 
+	// TODO
 	public Sort toSort(List<OrderSpecifier<?>> orderBys) {
 		Sort sort = Sort.unsorted();
 		for (OrderSpecifier<?> orderBy : orderBys) {
@@ -99,12 +100,12 @@ public abstract class CouchbaseDocumentSerializer implements Visitor<Object, Voi
 
 	protected QueryCriteriaDefinition asDocument(String key, Object value) {
 		QueryCriteria qc = null;
-		if (1 == 1) {
+		if (workInProgress) {
 			throw new UnsupportedOperationException("Wrong path to create this criteria " + key);
 		}
-		if (key.equals("$and") || key.equals("$or") /* value instanceof QueryCriteria[] */) {
+		if (key.equals(Ops.AND) || key.equals(Ops.OR)) {
 			throw new UnsupportedOperationException("Wrong path to create this criteria " + key);
-		} else if (key.equals("$in") /* value instanceof QueryCriteria[] */) {
+		} else if (key.equals(Ops.IN)) {
 			throw new RuntimeException(("not supported"));
 		} else {
 			qc = QueryCriteria.where(key).is(value);
@@ -122,21 +123,14 @@ public abstract class CouchbaseDocumentSerializer implements Visitor<Object, Voi
 				Operation<?> lhs = (Operation<?>) expr.getArg(0);
 				if (lhs.getOperator() == Ops.COL_SIZE || lhs.getOperator() == Ops.ARRAY_SIZE
 						|| lhs.getOperator() == Ops.STRING_LENGTH) {
-					// return asDocument(asDBKey(lhs, 0), asDocument("$size", asDBValue(expr, 1)));
 					return QueryCriteria.where(asDBKey(expr, 0)).is(asDBValue(expr, 1));
 				} else {
 					throw new UnsupportedOperationException("Illegal operation " + expr);
 				}
 			} else if (expr.getArg(0) instanceof Path) {
-				/*
-					Path<?> path = (Path<?>) expr.getArg(0);
-					Constant<?> constant = (Constant<?>) expr.getArg(1);
-					return asDocument(asDBKey(expr, 0), convert(path, constant));
-					*/
 				return QueryCriteria.where(asDBKey(expr, 0)).is(asDBValue(expr, 1));
 			}
 		} else if (op == Ops.STRING_IS_EMPTY) {
-			// return asDocument(asDBKey(expr, 0), "");
 			return QueryCriteria.where(asDBKey(expr, 0)).isNotValued().or(asDBKey(expr, 0)).is("");
 		} else if (op == Ops.NOT) {
 			// Handle the not's child
@@ -148,64 +142,41 @@ public abstract class CouchbaseDocumentSerializer implements Visitor<Object, Voi
 						context);
 			} else {
 				QueryCriteria arg = (QueryCriteria) handle(expr.getArg(0));
-				return arg.negate(); // negate(arg);
+				return arg.negate();
 			}
 
 		} else if (op == Ops.AND) {
-			// return asDocument("$and", collectConnectorArgs("$and", expr));
-			return collectConnectorArgs("$and", expr);
+			return collectConnectorArgs(Ops.AND, expr);
 		} else if (op == Ops.OR) {
-			// return asDocument("$or", collectConnectorArgs("$or", expr));
-			return collectConnectorArgs("$or", expr);
+			return collectConnectorArgs(Ops.OR, expr);
 		} else if (op == Ops.NE) {
-			// Path<?> path = (Path<?>) expr.getArg(0);
-			// Constant<?> constant = (Constant<?>) expr.getArg(1);
-			// return asDocument(asDBKey(expr, 0), asDocument("$ne", convert(path, constant)));
 			return QueryCriteria.where(asDBKey(expr, 0)).ne(asDBValue(expr, 1));
 		} else if (op == Ops.STARTS_WITH) {
-			// return asDocument(asDBKey(expr, 0), new CBRegularExpression("^" + regexValue(expr, 1)));
 			return QueryCriteria.where(asDBKey(expr, 0)).startingWith(asDBValue(expr, 1));
 		} else if (op == Ops.STARTS_WITH_IC) {
-			// return asDocument(asDBKey(expr, 0), new CBRegularExpression("^" + regexValue(expr, 1), "i"));
 			return QueryCriteria.where(asDBKey(expr, 0)).upper()
 					.startingWith(asDBValue(expr, 1).toString().toUpperCase(Locale.ROOT));
 		} else if (op == Ops.ENDS_WITH) {
-			// return asDocument(asDBKey(expr, 0), new CBRegularExpression(regexValue(expr, 1) + "$"));
 			return QueryCriteria.where(asDBKey(expr, 0)).endingWith(asDBValue(expr, 1));
 		} else if (op == Ops.ENDS_WITH_IC) {
-			// return asDocument(asDBKey(expr, 0), new CBRegularExpression(regexValue(expr, 1) + "$", "i"));
 			return QueryCriteria.where(asDBKey(expr, 0)).upper()
 					.endingWith(asDBValue(expr, 1).toString().toUpperCase(Locale.ROOT));
 		} else if (op == Ops.EQ_IGNORE_CASE) {
-			// return asDocument(asDBKey(expr, 0), new CBRegularExpression("^" + regexValue(expr, 1) + "$", "i"));
 			return QueryCriteria.where(asDBKey(expr, 0)).upper().eq(asDBValue(expr, 1).toString().toUpperCase(Locale.ROOT));
 		} else if (op == Ops.STRING_CONTAINS) {
-			// return asDocument(asDBKey(expr, 0), new CBRegularExpression(".*" + regexValue(expr, 1) + ".*"));
 			return QueryCriteria.where(asDBKey(expr, 0)).containing(asDBValue(expr, 1));
 		} else if (op == Ops.STRING_CONTAINS_IC) {
-			// return asDocument(asDBKey(expr, 0), new CBRegularExpression(".*" + regexValue(expr, 1) + ".*", "i"));
 			return QueryCriteria.where(asDBKey(expr, 0)).upper()
 					.containing(asDBValue(expr, 1).toString().toUpperCase(Locale.ROOT));
-			/*
-					} else if (op == Ops.MATCHES) {
-						//return asDocument(asDBKey(expr, 0), new CBRegularExpression(asDBValue(expr, 1).toString()));
-						return QueryCriteria.where(asDBKey(expr, 0)).like(asDBValue(expr,1));
-					} else if (op == Ops.MATCHES_IC) {
-						//return asDocument(asDBKey(expr, 0), new CBRegularExpression(asDBValue(expr, 1).toString(), "i"));
-						return QueryCriteria.where("UPPER("+asDBKey(expr, 0)+")").like("UPPER("+asDBValue(expr,1)+")");
-			*/
+		} else if (op == Ops.MATCHES) {
+			return QueryCriteria.where(asDBKey(expr, 0)).regex(asDBValue(expr, 1));
+		} else if (op == Ops.MATCHES_IC) {
+			return QueryCriteria.where("UPPER(" + asDBKey(expr, 0) + ")").regex("UPPER(" + asDBValue(expr, 1) + ")");
 		} else if (op == Ops.LIKE) {
-			// String regex = ExpressionUtils.likeToRegex((Expression) expr.getArg(1)).toString();
-			// return asDocument(asDBKey(expr, 0), new CBRegularExpression(regex));
 			return QueryCriteria.where(asDBKey(expr, 0)).like(asDBValue(expr, 1));
 		} else if (op == Ops.LIKE_IC) {
-			// String regex = ExpressionUtils.likeToRegex((Expression) expr.getArg(1)).toString();
-			// return asDocument(asDBKey(expr, 0), new CBRegularExpression(regex, "i"));
 			return QueryCriteria.where(asDBKey(expr, 0)).upper().like(asDBValue(expr, 1).toString().toUpperCase(Locale.ROOT));
 		} else if (op == Ops.BETWEEN) {
-			// Document value = new Document("$gte", this.asDBValue(expr, 1));
-			// value.append("$lte", this.asDBValue(expr, 2));
-			// return this.asDocument(this.asDBKey(expr, 0), value);
 			return QueryCriteria.where(asDBKey(expr, 0)).between(asDBValue(expr, 1), asDBValue(expr, 2));
 		} else if (op == Ops.IN) {
 			int constIndex = 0;
@@ -217,16 +188,13 @@ public abstract class CouchbaseDocumentSerializer implements Visitor<Object, Voi
 			if (Collection.class.isAssignableFrom(expr.getArg(constIndex).getType())) {
 				@SuppressWarnings("unchecked") // guarded by previous check
 				Collection<?> values = ((Constant<? extends Collection<?>>) expr.getArg(constIndex)).getConstant();
-				// return asDocument(asDBKey(expr, exprIndex), asDocument("$in", values));
 				return QueryCriteria.where(asDBKey(expr, exprIndex)).in(values);
-			} else { // I think framework already converts IN to EQ if arg is not a collection
-				// Path<?> path = (Path<?>) expr.getArg(exprIndex);
-				// Constant<?> constant = (Constant<?>) expr.getArg(constIndex);
-				// return asDocument(asDBKey(expr, exprIndex), convert(path, constant));
+			} else { // framework already converts IN to EQ if arg is not a collection
+				if (workInProgress)
+					throw new RuntimeException("good, we are testing in -> eq");
 				Object value = expr.getArg(constIndex);
 				return QueryCriteria.where(asDBKey(expr, exprIndex)).eq(value);
 			}
-
 		} else if (op == Ops.NOT_IN) {
 			int constIndex = 0;
 			int exprIndex = 1;
@@ -237,93 +205,35 @@ public abstract class CouchbaseDocumentSerializer implements Visitor<Object, Voi
 			if (Collection.class.isAssignableFrom(expr.getArg(constIndex).getType())) {
 				@SuppressWarnings("unchecked") // guarded by previous check
 				Collection<?> values = ((Constant<? extends Collection<?>>) expr.getArg(constIndex)).getConstant();
-				// return asDocument(asDBKey(expr, exprIndex), asDocument("$nin", values));
 				return QueryCriteria.where(asDBKey(expr, exprIndex)).notIn(values);
-			} else { // I think framework already converts NOT_IN to NE if arg is not a collection
-				// Path<?> path = (Path<?>) expr.getArg(exprIndex);
-				// Constant<?> constant = (Constant<?>) expr.getArg(constIndex);
-				// return asDocument(asDBKey(expr, exprIndex), asDocument("$ne", convert(path, constant)));
+			} else { // framework already converts NOT_IN to NE if arg is not a collection
+				if (workInProgress)
+					throw new RuntimeException("good, we are testing not_in -> ne");
 				Object value = expr.getArg(constIndex);
 				return QueryCriteria.where(asDBKey(expr, exprIndex)).ne(value);
 			}
-
 		} else if (op == Ops.COL_IS_EMPTY) {
-			// List<Object> list = new ArrayList<Object>(2);
-			// list.add(asDocument(asDBKey(expr, 0), new ArrayList<Object>()));
-			// list.add(asDocument(asDBKey(expr, 0), asDocument("$exists", false)));
-			// return asDocument("$or", list);
 			return QueryCriteria.where(asDBKey(expr, 0)).isNotValued();
 		} else if (op == Ops.LT) {
-			// return asDocument(asDBKey(expr, 0), asDocument("$lt", asDBValue(expr, 1)));
 			return QueryCriteria.where(asDBKey(expr, 0)).lt(asDBValue(expr, 1));
 		} else if (op == Ops.GT) {
-			// return asDocument(asDBKey(expr, 0), asDocument("$gt", asDBValue(expr, 1)));
 			return QueryCriteria.where(asDBKey(expr, 0)).gt(asDBValue(expr, 1));
 		} else if (op == Ops.LOE) {
-			// return asDocument(asDBKey(expr, 0), asDocument("$lte", asDBValue(expr, 1)));
 			return QueryCriteria.where(asDBKey(expr, 0)).lte(asDBValue(expr, 1));
 		} else if (op == Ops.GOE) {
-			// return asDocument(asDBKey(expr, 0), asDocument("$gte", asDBValue(expr, 1)));
 			return QueryCriteria.where(asDBKey(expr, 0)).gte(asDBValue(expr, 1));
 		} else if (op == Ops.IS_NULL) {
-			// return asDocument(asDBKey(expr, 0), asDocument("$exists", false));
 			return QueryCriteria.where(asDBKey(expr, 0)).isNull();
 		} else if (op == Ops.IS_NOT_NULL) {
-			// return asDocument(asDBKey(expr, 0), asDocument("$exists", true));
 			return QueryCriteria.where(asDBKey(expr, 0)).isNotNull();
 		} else if (op == Ops.CONTAINS_KEY) { // TODO not sure about this one
-			Path<?> path = (Path<?>) expr.getArg(0);
-			// Expression<?> key = expr.getArg(1);
-			// return asDocument(visit(path, context) + "." + key.toString(), asDocument("$exists", true));
 			return QueryCriteria.where("meta().id"/*asDBKey(expr, 0)*/).eq(asDBKey(expr, 1));
 		} else if (op == Ops.STRING_LENGTH) {
 			return "LENGTH(" + asDBKey(expr, 0) + ")";// QueryCriteria.where(asDBKey(expr, 0)).size();
 		}
-
-		throw new UnsupportedOperationException("Illegal operation " + expr);
+		throw new UnsupportedOperationException("Unsupported operation " + expr);
 	}
 
-	/* TODO -- need later
-		private Object negate(QueryCriteriaDefinition arg) {
-			List<Object> list = new ArrayList<Object>();
-			for (Map.Entry<String, Object> entry : arg.entrySet()) {
-				if (entry.getKey().equals("$or")) {
-					list.add(asDocument("$nor", entry.getValue()));
-	
-				} else if (entry.getKey().equals("$and")) {
-					List<Object> list2 = new ArrayList<Object>();
-					for (Object o : ((Collection) entry.getValue())) {
-						list2.add(negate((QueryCriteriaDefinition) o));
-					}
-					list.add(asDocument("$or", list2));
-	
-				} else if (entry.getValue() instanceof Pattern || entry.getValue() instanceof CBRegularExpression) {
-					list.add(asDocument(entry.getKey(), asDocument("$not", entry.getValue())));
-	
-				} else if (entry.getValue() instanceof QueryCriteriaDefinition) {
-					list.add(negate(entry.getKey(), (QueryCriteriaDefinition) entry.getValue()));
-	
-				} else {
-					list.add(asDocument(entry.getKey(), asDocument("$ne", entry.getValue())));
-				}
-			}
-			return list.size() == 1 ? list.get(0) : asDocument("$or", list);
-		}
-	
-		private Object negate(String key, QueryCriteriaDefinition value) {
-			if (value.size() == 1) {
-				return asDocument(key, asDocument("$not", value));
-			} else {
-				List<Object> list2 = new ArrayList<Object>();
-				for (Map.Entry<String, Object> entry2 : value.entrySet()) {
-					list2.add(asDocument(key, asDocument("$not", asDocument(entry2.getKey(), entry2.getValue()))));
-				}
-				return asDocument("$or", list2);
-			}
-		}
-	*/
-
-	/* TODO -- need later
 	protected Object convert(Path<?> property, Constant<?> constant) {
 		if (isReference(property)) {
 			return asReference(constant.getConstant());
@@ -332,12 +242,11 @@ public abstract class CouchbaseDocumentSerializer implements Visitor<Object, Voi
 				return asReferenceKey(property.getMetadata().getParent().getType(), constant.getConstant());
 			} else if (constant.getType().equals(String.class) && isImplicitObjectIdConversion()) {
 				String id = (String) constant.getConstant();
-				return ObjectId.isValid(id) ? new ObjectId(id) : id;
+				return id;
 			}
 		}
 		return visit(constant, null);
 	}
-	 */
 
 	protected boolean isImplicitObjectIdConversion() {
 		return true;
@@ -390,16 +299,16 @@ public abstract class CouchbaseDocumentSerializer implements Visitor<Object, Voi
 		throw new UnsupportedOperationException();
 	}
 
-	private QueryCriteriaDefinition collectConnectorArgs(String operator, Operation<?> operation) {
+	private QueryCriteriaDefinition collectConnectorArgs(Ops operator, Operation<?> operation) {
 		QueryCriteria first = null;
 		for (Expression<?> exp : operation.getArgs()) {
 			QueryCriteria document = (QueryCriteria) handle(exp);
 			if (first == null) {
 				first = document;
 			} else {
-				if (operator.equals("$or")) {
+				if (operator.equals(Ops.OR)) {
 					first = first.or(document);
-				} else if (operator.equals("$and")) {
+				} else if (operator.equals(Ops.AND)) {
 					first = first.and(document);
 				}
 			}

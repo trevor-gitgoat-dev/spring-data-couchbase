@@ -23,11 +23,11 @@ import java.util.Formatter;
 import java.util.LinkedList;
 import java.util.List;
 
-import com.couchbase.client.core.error.CouchbaseException;
 import org.springframework.data.couchbase.core.convert.CouchbaseConverter;
 import org.springframework.lang.Nullable;
 import org.springframework.util.CollectionUtils;
 
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -142,7 +142,6 @@ public class QueryCriteria implements QueryCriteriaDefinition {
 	}
 
 	public QueryCriteria and(N1QLExpression key) {
-		// this.criteriaChain.getLast().setChainOperator(ChainOperator.AND);
 		return new QueryCriteria(this.criteriaChain, key, null, ChainOperator.AND);
 	}
 
@@ -158,7 +157,7 @@ public class QueryCriteria implements QueryCriteriaDefinition {
 		QueryCriteria qc = wrap(criteria);
 		newThis.criteriaChain.add(qc);
 		qc.setChainOperator(ChainOperator.AND);
-		newThis.chainOperator = ChainOperator.AND;//  otherwise we get "A chain operator must be present when chaining"
+		newThis.chainOperator = ChainOperator.AND;// otherwise we get "A chain operator must be present when chaining"
 		return newThis;
 	}
 
@@ -183,7 +182,6 @@ public class QueryCriteria implements QueryCriteriaDefinition {
 	}
 
 	public QueryCriteria or(N1QLExpression key) {
-		// this.criteriaChain.getLast().setChainOperator(ChainOperator.OR);
 		return new QueryCriteria(this.criteriaChain, key, null, ChainOperator.OR);
 	}
 
@@ -200,7 +198,7 @@ public class QueryCriteria implements QueryCriteriaDefinition {
 		qc.criteriaChain = newThis.criteriaChain;
 		newThis.criteriaChain.add(qc);
 		qc.setChainOperator(ChainOperator.OR);
-		newThis.chainOperator = ChainOperator.OR;//  otherwise we get "A chain operator must be present when chaining"
+		newThis.chainOperator = ChainOperator.OR;// otherwise we get "A chain operator must be present when chaining"
 		return newThis;
 	}
 
@@ -297,8 +295,6 @@ public class QueryCriteria implements QueryCriteriaDefinition {
 		replaceThisAsWrapperOf(this);
 		operator = "NOT";
 		format = "not( %3$s )";
-		// criteriaChain = new LinkedList<>();
-		// criteriaChain.add(this);
 		return this;
 	}
 
@@ -405,7 +401,7 @@ public class QueryCriteria implements QueryCriteriaDefinition {
 				} else {
 					// see QueryCriteriaTests.testNestedNotIn() - if arg to notIn is not cast to Object
 					// notIn((Object) new String[] { "Alabama", "Florida" }));
-					throw new CouchbaseException("unhandled parameters "+o);
+					throw new CouchbaseException("unhandled parameters " + o);
 				}
 			}
 
